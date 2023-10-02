@@ -32,30 +32,29 @@ vector<int> dis(SCALE, 0);
 Graph<Edge<int>, SCALE> g;
 
 #define INF 0x3FFFFFFF
-void dijkstra(int s, int n)
+void spfa(int s, int n)
 {
     vector<int> vis(n + 1, 0);
     for (int i = 1; i <= n; i++)
         dis[i] = (i == s ? 0 : INF);
-    // greater实现小顶堆, less 实现大顶堆（默认为大顶堆）
-    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> q;
-    q.push(make_pair(dis[s], s));
+    queue<int> q;
+    q.push(s);
+    vis[s] = 1;
     while (!q.empty())
     {
-        auto p = q.top();
+        int v = q.front();
         q.pop();
-        int x = p.second;
-        if (vis[x])
-            continue;
-        vis[x] = 1;
-        for (int i = 0; i < g[x].size(); i++)
+        vis[v] = 0;
+        for (int i = 0; i < g[v].size(); i++)
         {
-            int y = g[x][i].to;
-            int d = g[x][i].weight;
-            if (!vis[y] && dis[x] + d < dis[y])
+            int t = g[v][i].to;
+            int w = g[v][i].weight;
+            if (dis[t] > dis[v] + w)
             {
-                dis[y] = dis[x] + d;
-                q.push(make_pair(dis[y], y));
+                dis[t] = dis[v] + w;
+                if (vis[t] == 0)
+                    q.push(t);
+                vis[t] = 1;
             }
         }
     }
@@ -72,8 +71,8 @@ int main()
         cin >> from >> to >> weight;
         g.addEdge(from, Edge<int>(to, weight));
     }
-    dijkstra(s, n);
+    spfa(s, n);
     for (int i = 1; i <= n; i++)
-        cout << dis[i] << " ";
+        cout << (dis[i] == INF ? 2147483647 : dis[i]) << " ";
     return 0;
 }
