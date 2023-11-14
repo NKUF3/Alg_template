@@ -1,3 +1,14 @@
+---
+title: acm dp学习
+date: 2023-11-01 16:21:41
+tags: [算法]
+mathjax: true
+---
+
+<center>动态规划</center>
+
+<!--more-->
+
 # 树形动态规划
 
 ## 树上背包
@@ -194,3 +205,139 @@ int main() {
 }
 ```
 
+### P2
+给定一个n个点的有根树。给出m条树上的简单路径，每个路径有一个权值。保证每个路径都是从一个点到它的祖先。要求选择一些路径，使得每个点至少在一条路径上，并且路径的权值和最小。
+
+令$dp[i][j]$表示i这棵子树内所有的点都在某条路径上，且通过i点的路径最高向上延申到深度为j的地方。$dp[i][j] = min_{min(j_1, j_2, ..., j_n)=j} (dp[c_1][j_1] + dp[c_2][j_2] + ... + dp[c_n][j_n])$。
+
+```cpp
+// O(nm)
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long ll;
+
+const int N = 2010;
+const ll inf = 1ll << 60;
+
+int n, m;
+vector<int> son[N];
+vector<array<int, 2>> path[N];
+int dep[N];
+
+ll dp[N][N];
+
+void merge(ll *a, ll *b, int len) {
+    static ll sufa[N], sufb[N];
+    sufa[len + 1] = inf;
+    sufb[len + 1] = inf;
+    for (int i = len; i >= 1; i--) {
+        sufa[i] = min(sufa[i + 1], a[i]);
+        sufb[i] = min(sufb[i + 1], b[i]);
+    }
+    for (int i = 1; i <= len; i++) {
+        a[i] = min(a[i] + sufb[i], b[i] + sufa[i]);
+    }
+}
+
+void dfs(int u) {
+    for (int i = 1; i <= dep[u]; i++) dp[u][i] = inf;
+    for (auto p : path[u]) {
+        dp[u][dep[p[0]]] = min(dp[u][dep[p[0]]], (ll)p[1]);
+    }
+    for (auto v : son[u]) {
+        dfs(v);
+        merge(dp[u], dp[v], dep[v]);
+    }
+}
+
+int main() {
+    cin >> n >> m;
+    dep[1] = 1;
+    for (int i = 2; i <= n; i++) {
+        int f;
+        cin >> f;
+        son[f].push_back(i);
+        dep[i] = dep[f] + 1; // 因为输入是按照顺序的，这里这样也行
+    }
+    for (int i = 1; i <= m; i++) {
+        int u, v, a;
+        cin >> u >> v >> a;
+        path[v].push_back({u, a});
+    }
+    dfs(1);
+    if (dp[1][1] >= inf)
+        cout << -1;
+    else
+        cout << dp[1][1];
+    return 0;
+}
+```
+
+## 树上连通块
+给定一个n个点的树。对于每个点，求出包含这个点的连通块的个数，答案对m取模。
+
+如果令$dp[i]$表示i这棵子树中包含i节点的连通块的个数，很简单得出$dp[i]=\Pi _{c_i\in childs[i]}(dp[c_i]+1)$。直接换根dp的话由于答案对m取模，父节点dp除以子节点dp不太对，所以我们引入一个dp2数组表示去除某个节点的子节点后包含该节点的连通块的个数。则最终答案$ans[i]=(dp2[father] + 1) * dp[i] % mod$。而$dp2[i]=(dp2[father] + 1) * \Pi (dp[brothers] + 1) % mod$。
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long ll;
+
+const int N = 2010;
+const ll inf = 1ll << 60;
+
+int n, mod;
+vector<int> son[N];
+
+ll dp[N], dp2[N], ans[N];
+
+void dfs1(int u) {
+    dp[u] = 1;
+    for (auto v : son[u]) {
+        dfs1(v);
+        dp[u] = dp[u] * (dp[v] + 1) % mod;
+    }
+}
+
+void dfs2(int u) {
+    static ll pre[N], suf[N];
+    int m = son[u].size();
+    if (m == 0) return;
+    pre[0] = 1;
+    for (int i = 0; i < m; i++) {
+        int v = son[u][i];
+        pre[i + 1] = pre[i] * (dp[v] + 1) % mod;
+    }
+    suf[m] = 1;
+    for (int i = m - 1; i >= 0; i--) {
+        int v = son[u][i];
+        suf[i] = suf[i + 1] * (dp[v] + 1) % mod;
+    }
+    for (int i = 0; i < m; i++) {
+        int v = son[u][i];
+        dp2[v] = pre[i] * suf[i + 1] % mod;
+        if (u != 1) dp2[v] = dp2[v] * (dp2[u] + 1) % mod;
+    }
+    for (auto v : son[u]) {
+        ans[v] = (dp2[v] + 1) * dp[v] % mod;
+        dfs2(v);
+    }
+}
+
+int main() {
+    cin >> n >> mod;
+    for (int i = 2; i <= n; i++) {
+        int f;
+        cin >> f;
+        son[f].push_back(i);
+    }
+    dfs1(1);
+    dfs2(1);
+    ans[1] = dp[1];
+    for (int i = 1; i <= n; i++)
+        cout << ans[i] << endl;
+    return 0;
+}
+```
